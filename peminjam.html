@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaranaShare - Portal Peminjam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .nav-btn { width: 100%; text-align: left; padding: .625rem 1rem; border-radius: .25rem; font-weight: 500; color: #374151; transition: background .15s; }
+        .nav-btn:hover { background: #f3f4f6; }
+        .nav-btn.active { background: #1d5c8a; color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+        .nav-btn.active:hover { background: #1d5c8a; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <!-- TOP HEADER -->
+    <header class="bg-[#1d5c8a] text-white h-16 flex items-center justify-between px-6 shadow fixed top-0 left-0 right-0 z-40">
+        <div class="flex items-center space-x-3">
+            <img src="logo_pbl-removebg-preview.png" alt="Logo SaranaShare" class="w-10 h-10 object-contain rounded bg-white p-1">
+            <span class="text-xl font-bold">SaranaShare</span>
+            <span class="bg-blue-800 text-xs px-2 py-0.5 rounded">Portal Peminjam</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span id="user-info" class="text-sm font-medium"></span>
+            <div id="user-avatar" class="bg-white text-gray-700 w-9 h-9 rounded-full flex items-center justify-center font-bold">?</div>
+            <button type="button" onclick="logout()" class="text-xs bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-white font-medium">
+                <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
+            </button>
+        </div>
+    </header>
+
+    <div class="flex pt-16 min-h-screen">
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-white border-r p-4 space-y-2">
+            <button type="button" data-nav="katalog" onclick="switchTab('katalog')" class="nav-btn active">
+                <i class="fa-solid fa-boxes-stacked mr-2"></i> Cari &amp; Pinjam Barang
+            </button>
+            <button type="button" data-nav="pinjaman" onclick="switchTab('pinjaman')" class="nav-btn flex items-center justify-between">
+                <span><i class="fa-solid fa-hand-holding mr-2"></i> Pinjaman Saya</span>
+                <span id="badge-pinjaman" class="hidden bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">0</span>
+            </button>
+            <button type="button" data-nav="riwayat" onclick="switchTab('riwayat')" class="nav-btn">
+                <i class="fa-solid fa-clock-rotate-left mr-2"></i> Rekap Riwayat
+            </button>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 p-6 min-w-0">
+            <!-- TAB 1: CARI & PINJAM (FR-05) -->
+            <section id="tab-katalog" class="tab-section space-y-4">
+                <h1 class="text-2xl font-bold text-gray-800">Cari &amp; Pinjam Barang</h1>
+                <div class="bg-white p-4 rounded shadow flex flex-wrap gap-3">
+                    <input type="text" id="keyword" oninput="renderKatalog()" placeholder="Cari kode, nama, kategori, kondisi..." class="flex-1 min-w-[220px] p-2 border rounded text-sm focus:outline-none focus:border-blue-500">
+                    <select id="kat-filter" onchange="renderKatalog()" class="p-2 border rounded text-sm bg-white"></select>
+                    <select id="kondisi-filter" onchange="renderKatalog()" class="p-2 border rounded text-sm bg-white">
+                        <option value="">Semua Kondisi</option>
+                        <option value="Baik">Baik</option>
+                        <option value="Rusak Ringan">Rusak Ringan</option>
+                        <option value="Perlu Perhatian">Perlu Perhatian</option>
+                    </select>
+                </div>
+
+                <div class="bg-white rounded shadow overflow-hidden">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-gray-100 border-b">
+                            <tr>
+                                <th class="p-3">Kode</th>
+                                <th class="p-3">Nama Barang</th>
+                                <th class="p-3">Kategori</th>
+                                <th class="p-3">Kondisi</th>
+                                <th class="p-3">Lokasi</th>
+                                <th class="p-3">Stok Tersedia</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-katalog"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 2: PINJAMAN SAYA (FR-04) -->
+            <section id="tab-pinjaman" class="tab-section space-y-4 hidden">
+                <h1 class="text-2xl font-bold text-gray-800">Pinjaman Aktif Saya</h1>
+                <p class="text-xs text-gray-500">Pengajuan baru perlu disetujui petugas. Setelah barang dikembalikan ke petugas, klik "Ajukan Pengembalian" agar petugas memverifikasi kondisinya.</p>
+                <div class="bg-white rounded shadow overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-gray-100 border-b">
+                            <tr>
+                                <th class="p-3">ID Transaksi</th>
+                                <th class="p-3">Barang</th>
+                                <th class="p-3">Jumlah</th>
+                                <th class="p-3">Tgl Pinjam</th>
+                                <th class="p-3">Batas Kembali</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-pinjaman"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 3: REKAP RIWAYAT (FR-07) -->
+            <section id="tab-riwayat" class="tab-section space-y-4 hidden">
+                <h1 class="text-2xl font-bold text-gray-800">Rekap Riwayat Peminjaman</h1>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded shadow"><p class="text-xs text-gray-500">Total pernah meminjam</p><p id="rk-total" class="text-2xl font-bold">0</p></div>
+                    <div class="bg-white p-4 rounded shadow"><p class="text-xs text-gray-500">Sedang dipinjam</p><p id="rk-aktif" class="text-2xl font-bold text-blue-700">0</p></div>
+                    <div class="bg-white p-4 rounded shadow"><p class="text-xs text-gray-500">Status pelanggaran</p><p id="rk-pelanggaran" class="text-2xl font-bold text-green-600">Bersih</p></div>
+                </div>
+                <div class="bg-white rounded shadow overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-gray-100 border-b">
+                            <tr>
+                                <th class="p-2.5">ID</th>
+                                <th class="p-2.5">Tgl Pinjam</th>
+                                <th class="p-2.5">Tgl Kembali</th>
+                                <th class="p-2.5">Barang</th>
+                                <th class="p-2.5">Jml</th>
+                                <th class="p-2.5">Kondisi Awal</th>
+                                <th class="p-2.5">Kondisi Akhir</th>
+                                <th class="p-2.5">Status</th>
+                                <th class="p-2.5">Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-riwayat" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL PENGAJUAN PEMINJAMAN (FR-06 validasi stok) -->
+    <div id="modal-pinjam" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md space-y-4 shadow-xl">
+            <h3 class="text-lg font-bold text-gray-800">Form Pengajuan Peminjaman</h3>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Nama Barang</label>
+                <input type="text" id="modal-nama-barang" readonly class="w-full p-2 border rounded bg-gray-100 text-sm font-semibold">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Jumlah Dipinjam</label>
+                <input type="number" min="1" step="1" id="modal-jumlah" oninput="validasiPinjam()" value="1" class="w-full p-2 border rounded text-sm">
+                <p id="hint-stok" class="text-xs text-gray-500 mt-1"></p>
+                <p id="err-stok" class="text-xs text-red-600 font-semibold hidden mt-1"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-xs font-semibold text-gray-600">Tgl Pinjam</label>
+                    <input type="date" id="modal-tgl-pinjam" onchange="validasiPinjam()" class="w-full p-2 border rounded text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-600">Batas Kembali</label>
+                    <input type="date" id="modal-batas" onchange="validasiPinjam()" class="w-full p-2 border rounded text-sm">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button type="button" onclick="tutupModal('modal-pinjam')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm">Batal</button>
+                <button type="button" id="btn-submit" onclick="simpanPinjam()" class="px-4 py-2 bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded text-sm font-medium">Ajukan Peminjaman</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT PENGAJUAN -->
+    <div id="modal-edit" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md space-y-4 shadow-xl">
+            <h3 class="text-lg font-bold text-gray-800">Koreksi Pengajuan</h3>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Barang</label>
+                <input type="text" id="edit-barang" readonly class="w-full p-2 border rounded bg-gray-100 text-sm font-semibold">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Jumlah Dipinjam</label>
+                <input type="number" min="1" step="1" id="edit-jumlah" oninput="validasiEdit()" class="w-full p-2 border rounded text-sm">
+                <p id="edit-hint" class="text-xs text-gray-500 mt-1"></p>
+                <p id="edit-err" class="text-xs text-red-600 font-semibold hidden mt-1"></p>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Batas Kembali</label>
+                <input type="date" id="edit-batas" onchange="validasiEdit()" class="w-full p-2 border rounded text-sm">
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button type="button" onclick="tutupModal('modal-edit')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm">Batal</button>
+                <button type="button" id="edit-submit" onclick="simpanKoreksi()" class="px-4 py-2 bg-amber-500 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded text-sm font-medium">Simpan Koreksi</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+/* ============================================================
+   SaranaShare - Data Store Bersama (frontend, localStorage)
+   ------------------------------------------------------------
+   Dipakai oleh petugas.html DAN peminjam.html supaya keduanya
+   membaca/menulis data yang sama.
+
+   Nanti saat backend sudah ada, cukup ganti isi fungsi
+   SS.list() dan SS.save() (dan fungsi aturan bisnis di bawah)
+   dengan pemanggilan API. Halaman HTML tidak perlu banyak diubah.
+
+   LOGIN: file login eksternal cukup menyimpan user peminjam:
+     localStorage.setItem('ss_user', JSON.stringify({nim:'...', nama:'...'}));
+   lalu redirect ke peminjam.html / petugas.html.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const SS = {};
+  window.SS = SS;
+
+  SS.LOGIN_URL = 'login.html';          // <- ganti sesuai nama file login kamu
+  const KEYS = {
+    kategori: 'ss_kategori',
+    barang: 'ss_barang',
+    anggota: 'ss_anggota',
+    transaksi: 'ss_transaksi',
+    user: 'ss_user'
+  };
+  SS.AKTIF = ['Diajukan', 'Dipinjam', 'Menunggu Verifikasi']; // status yang "menahan" stok
+  SS.KONDISI = ['Baik', 'Rusak Ringan', 'Perlu Perhatian'];   // urut dari terbaik ke terburuk
+  const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+  /* ---------- penyimpanan dasar ---------- */
+  const mem = {}; // cadangan kalau localStorage diblokir browser
+  function rawGet(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] === undefined ? null : mem[k]; } }
+  function rawSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
+  function rawDel(k) { try { localStorage.removeItem(k); } catch (e) { delete mem[k]; } }
+
+  function load(name) {
+    const raw = rawGet(KEYS[name]);
+    if (raw === null) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+  SS.list = name => load(name) || [];
+  SS.save = (name, arr) => rawSet(KEYS[name], JSON.stringify(arr));
+
+  /* ---------- tanggal & util ---------- */
+  const z = n => String(n).padStart(2, '0');
+  const iso = d => d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+  SS.today = () => iso(new Date());
+  SS.addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+  SS.fmtDate = s => {
+    if (!s) return '-';
+    const p = s.split('-');
+    return (+p[2]) + ' ' + BULAN[+p[1] - 1] + ' ' + p[0];
+  };
+  SS.daysLate = t => Math.max(0, Math.round((new Date(SS.today()) - new Date(t.batasKembali)) / 86400000));
+  SS.esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  /* ---------- data awal (demo) ---------- */
+  function defaults() {
+    const y = new Date().getFullYear();
+    const id = n => 'TRX-' + y + '-' + z(n).padStart(3, '0');
+    const A = { nim: '3312401001', nama: 'Ahmad Dahlan' };
+    const S = { nim: '3312401002', nama: 'Siti Aminah' };
+    const B = { nim: '3312401003', nama: 'Budi Santoso' };
+    const mk = (n, p, kode, namaBarang, jumlah, pj, bk, kembali, awal, akhir, status, catatan) => ({
+      id: id(n), nim: p.nim, nama: p.nama, kode, namaBarang, jumlah,
+      tglPinjam: SS.addDays(pj), batasKembali: SS.addDays(bk),
+      tglKembali: kembali === null ? null : SS.addDays(kembali),
+      kondisiAwal: awal, kondisiAkhir: akhir, catatan: catatan || '', status
+    });
+    return {
+      kategori: [
+        { id: 'KAT-01', nama: 'Elektronik', ket: 'Perangkat elektronik & komputer' },
+        { id: 'KAT-02', nama: 'Alat Tulis', ket: 'Perlengkapan tulis & presentasi' },
+        { id: 'KAT-03', nama: 'Perabotan', ket: 'Meja, kursi, dan perabot lain' }
+      ],
+      barang: [
+        { kode: 'A001', nama: 'Laptop Dell XPS 13', kategori: 'Elektronik', kondisi: 'Baik', stok: 15, lokasi: 'Gudang A' },
+        { kode: 'A002', nama: 'Proyektor Epson EB-X400', kategori: 'Elektronik', kondisi: 'Baik', stok: 5, lokasi: 'Lab Multimedia' },
+        { kode: 'A003', nama: 'Spidol Whiteboard (Box)', kategori: 'Alat Tulis', kondisi: 'Baik', stok: 30, lokasi: 'Gudang B' },
+        { kode: 'A004', nama: 'Kursi Lipat', kategori: 'Perabotan', kondisi: 'Baik', stok: 20, lokasi: 'Gudang B' },
+        { kode: 'A005', nama: 'Kamera DSLR Canon 200D', kategori: 'Elektronik', kondisi: 'Rusak Ringan', stok: 3, lokasi: 'Lab Multimedia' }
+      ],
+      anggota: [
+        { nim: A.nim, nama: A.nama, kelas: 'IF Pagi A', hp: '081234567890' },
+        { nim: S.nim, nama: S.nama, kelas: 'IF Pagi A', hp: '081234567891' },
+        { nim: B.nim, nama: B.nama, kelas: 'IF Pagi B', hp: '081234567892' }
+      ],
+      transaksi: [
+        mk(1, A, 'A001', 'Laptop Dell XPS 13', 1, -15, -13, null, 'Baik', null, 'Dipinjam'),            // terlambat
+        mk(2, A, 'A002', 'Proyektor Epson EB-X400', 2, -2, 0, null, 'Baik', null, 'Dipinjam'),
+        mk(3, S, 'A005', 'Kamera DSLR Canon 200D', 3, -1, 2, null, 'Rusak Ringan', null, 'Dipinjam'),     // stok habis
+        mk(4, A, 'A002', 'Proyektor Epson EB-X400', 1, -6, -4, -4, 'Baik', 'Baik', 'Dikembalikan'),
+        mk(5, B, 'A004', 'Kursi Lipat', 5, 0, 2, null, 'Baik', null, 'Diajukan'),
+        mk(6, S, 'A005', 'Kamera DSLR Canon 200D', 1, -20, -18, -18, 'Baik', 'Rusak Ringan', 'Dikembalikan', 'Lensa ada goresan halus')
+      ]
+    };
+  }
+  SS.init = () => {
+    const d = defaults();
+    Object.keys(d).forEach(name => { if (load(name) === null) SS.save(name, d[name]); });
+  };
+  SS.reset = () => {
+    ['kategori', 'barang', 'anggota', 'transaksi'].forEach(n => rawDel(KEYS[n]));
+    SS.init();
+  };
+
+  /* ---------- user ---------- */
+  SS.currentUser = () => {
+    try { const u = JSON.parse(rawGet(KEYS.user)); if (u && u.nim) return u; } catch (e) { /* abaikan */ }
+    return { nim: '3312401001', nama: 'Ahmad Dahlan' }; // default demo
+  };
+  SS.logout = () => { location.href = SS.LOGIN_URL; };
+
+  /* ---------- stok ---------- */
+  SS.findBarang = kode => SS.list('barang').find(b => b.kode === kode);
+  // jumlah unit yang sedang diajukan/dipinjam (menahan stok)
+  SS.held = (kode, exceptId) => SS.list('transaksi')
+    .filter(t => t.kode === kode && SS.AKTIF.includes(t.status) && t.id !== exceptId)
+    .reduce((a, t) => a + t.jumlah, 0);
+  SS.tersedia = (kode, exceptId) => {
+    const b = SS.findBarang(kode);
+    return b ? Math.max(0, b.stok - SS.held(kode, exceptId)) : 0;
+  };
+  SS.bisaDipinjam = b => b.kondisi !== 'Perlu Perhatian' && SS.tersedia(b.kode) > 0;
+  SS.isLate = t => (t.status === 'Dipinjam' || t.status === 'Menunggu Verifikasi') && t.batasKembali < SS.today();
+
+  /* ---------- FR-06: validasi peminjaman ---------- */
+  SS.cekPinjam = o => {
+    const b = SS.findBarang(o.kode);
+    if (!b) return 'Barang tidak ditemukan.';
+    if (!o.exceptId && b.kondisi === 'Perlu Perhatian') return 'Barang berstatus "Perlu Perhatian" dan belum bisa dipinjam.';
+    const j = Number(o.jumlah);
+    if (o.jumlah === '' || !Number.isInteger(j) || j <= 0) return 'Jumlah harus bilangan bulat lebih dari 0.';
+    const sedia = SS.tersedia(o.kode, o.exceptId);
+    if (j > sedia) return 'Jumlah melebihi stok tersedia (' + sedia + ' unit).';
+    if (!o.tglPinjam || !o.batasKembali) return 'Tanggal pinjam dan batas kembali harus diisi.';
+    if (o.tglMin && o.tglPinjam < o.tglMin) return 'Tanggal pinjam tidak boleh sebelum hari ini.';
+    if (o.batasKembali < o.tglPinjam) return 'Batas kembali tidak boleh sebelum tanggal pinjam.';
+    return null;
+  };
+
+  /* ---------- transaksi ---------- */
+  function nextId() {
+    const pre = 'TRX-' + new Date().getFullYear() + '-';
+    const max = SS.list('transaksi').filter(t => t.id.startsWith(pre))
+      .reduce((m, t) => Math.max(m, parseInt(t.id.slice(pre.length), 10) || 0), 0);
+    return pre + String(max + 1).padStart(3, '0');
+  }
+  function ubah(id, fn) {
+    const arr = SS.list('transaksi');
+    const t = arr.find(x => x.id === id);
+    if (!t) return { ok: false, msg: 'Transaksi tidak ditemukan.' };
+    const r = fn(t) || {};
+    if (r.ok === false) return r;
+    SS.save('transaksi', arr);
+    return { ok: true, trx: t, msg: r.msg };
+  }
+
+  // langsung=true -> dibuat petugas, langsung berstatus Dipinjam. Selain itu: Diajukan oleh peminjam.
+  SS.buatTransaksi = o => {
+    const err = SS.cekPinjam(o);
+    if (err) return { ok: false, msg: err };
+    const b = SS.findBarang(o.kode);
+    const arr = SS.list('transaksi');
+    const t = {
+      id: nextId(), nim: o.nim, nama: o.nama, kode: o.kode, namaBarang: b.nama,
+      jumlah: Number(o.jumlah), tglPinjam: o.tglPinjam, batasKembali: o.batasKembali,
+      tglKembali: null, kondisiAwal: b.kondisi, kondisiAkhir: null, catatan: '',
+      status: o.langsung ? 'Dipinjam' : 'Diajukan'
+    };
+    arr.push(t);
+    SS.save('transaksi', arr);
+    return { ok: true, trx: t };
+  };
+
+  SS.editTransaksi = (id, o) => ubah(id, t => {
+    if (!['Diajukan', 'Dipinjam'].includes(t.status)) return { ok: false, msg: 'Transaksi ini sudah tidak bisa diedit.' };
+    const err = SS.cekPinjam({ kode: t.kode, jumlah: o.jumlah, tglPinjam: t.tglPinjam, batasKembali: o.batasKembali, exceptId: t.id });
+    if (err) return { ok: false, msg: err };
+    t.jumlah = Number(o.jumlah);
+    t.batasKembali = o.batasKembali;
+  });
+
+  SS.setujui = id => ubah(id, t => {
+    if (t.status !== 'Diajukan') return { ok: false, msg: 'Hanya pengajuan yang bisa disetujui.' };
+    const b = SS.findBarang(t.kode);
+    if (!b) return { ok: false, msg: 'Barang sudah tidak ada di data master.' };
+    if (b.kondisi === 'Perlu Perhatian') return { ok: false, msg: 'Barang berstatus "Perlu Perhatian", tidak bisa dipinjamkan.' };
+    t.status = 'Dipinjam';
+    t.kondisiAwal = b.kondisi;
+  });
+
+  SS.tolak = (id, alasan) => ubah(id, t => {
+    if (t.status !== 'Diajukan') return { ok: false, msg: 'Hanya pengajuan yang bisa ditolak.' };
+    t.status = 'Ditolak';
+    t.catatan = alasan || '';
+  });
+
+  SS.batalkan = id => ubah(id, t => {
+    if (!SS.AKTIF.includes(t.status)) return { ok: false, msg: 'Transaksi ini tidak bisa dibatalkan.' };
+    t.status = 'Dibatalkan';
+  });
+
+  // peminjam membatalkan pengajuannya sendiri (belum disetujui) -> dihapus
+  SS.hapusPengajuan = (id, nim) => {
+    const arr = SS.list('transaksi');
+    const i = arr.findIndex(t => t.id === id && t.nim === nim && t.status === 'Diajukan');
+    if (i < 0) return { ok: false, msg: 'Pengajuan tidak bisa dibatalkan (mungkin sudah diproses petugas).' };
+    arr.splice(i, 1);
+    SS.save('transaksi', arr);
+    return { ok: true };
+  };
+
+  // peminjam menyatakan sudah mengembalikan -> menunggu verifikasi petugas
+  SS.mintaKembali = (id, nim) => ubah(id, t => {
+    if (t.nim !== nim) return { ok: false, msg: 'Ini bukan pinjaman Anda.' };
+    if (t.status !== 'Dipinjam') return { ok: false, msg: 'Pinjaman ini tidak bisa diajukan pengembalian.' };
+    t.status = 'Menunggu Verifikasi';
+  });
+
+  // petugas memproses pengembalian + mencatat kondisi akhir
+  SS.kembalikan = (id, kondisiAkhir, catatan) => ubah(id, t => {
+    if (!['Dipinjam', 'Menunggu Verifikasi'].includes(t.status)) return { ok: false, msg: 'Transaksi ini tidak sedang dipinjam.' };
+    if (!SS.KONDISI.includes(kondisiAkhir)) return { ok: false, msg: 'Pilih kondisi barang saat dikembalikan.' };
+    t.status = 'Dikembalikan';
+    t.tglKembali = SS.today();
+    t.kondisiAkhir = kondisiAkhir;
+    t.catatan = catatan || t.catatan || '';
+    let msg = 'Barang dikembalikan, stok bertambah.';
+    const bs = SS.list('barang');
+    const b = bs.find(x => x.kode === t.kode);
+    if (b && SS.KONDISI.indexOf(kondisiAkhir) > SS.KONDISI.indexOf(b.kondisi)) {
+      b.kondisi = kondisiAkhir;
+      SS.save('barang', bs);
+      msg += ' Kondisi barang di Data Barang diperbarui menjadi "' + kondisiAkhir + '".';
+    }
+    return { msg };
+  });
+
+  /* ---------- tampilan: badge ---------- */
+  const BADGE = {
+    'Diajukan': 'bg-amber-100 text-amber-800',
+    'Dipinjam': 'bg-blue-100 text-blue-800',
+    'Menunggu Verifikasi': 'bg-purple-100 text-purple-800',
+    'Dikembalikan': 'bg-emerald-100 text-emerald-800',
+    'Ditolak': 'bg-rose-100 text-rose-800',
+    'Dibatalkan': 'bg-gray-200 text-gray-700'
+  };
+  SS.badgeStatus = s => '<span class="' + (BADGE[s] || 'bg-gray-100 text-gray-700') + ' px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap">' + SS.esc(s) + '</span>';
+  const KB = { 'Baik': 'bg-emerald-100 text-emerald-800', 'Rusak Ringan': 'bg-orange-100 text-orange-800', 'Perlu Perhatian': 'bg-red-100 text-red-800' };
+  SS.badgeKondisi = k => k ? '<span class="' + (KB[k] || 'bg-gray-100 text-gray-700') + ' px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap">' + SS.esc(k) + '</span>' : '<span class="text-gray-400">-</span>';
+  SS.kondisiText = k => k === 'Baik' ? 'text-green-600' : (k === 'Rusak Ringan' ? 'text-orange-500' : 'text-red-500');
+
+  /* ---------- toast & CSV ---------- */
+  SS.toast = (msg, type) => {
+    let box = document.getElementById('ss-toast');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'ss-toast';
+      box.className = 'fixed bottom-5 right-5 z-[100] space-y-2';
+      document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    el.className = 'px-4 py-2.5 rounded shadow-lg text-sm text-white max-w-sm ' + (type === 'error' ? 'bg-red-600' : 'bg-emerald-600');
+    el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), type === 'error' ? 5000 : 3500);
+  };
+  SS.csv = (rows, filename) => {
+    const cell = v => {
+      let s = String(v == null ? '' : v);
+      if (s.length > 1 && /^[=+\-@]/.test(s)) s = "'" + s; // cegah formula injection di Excel
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+    const text = '\ufeff' + rows.map(r => r.map(cell).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  /* ---------- sinkron antar tab (petugas <-> peminjam) ---------- */
+  SS.onChange = null;
+  window.addEventListener('storage', e => {
+    if (e.key && e.key.indexOf('ss_') === 0 && typeof SS.onChange === 'function') SS.onChange();
+  });
+
+  SS.init();
+})();
+
+</script>
+    <script>
+        const $ = id => document.getElementById(id);
+        const esc = SS.esc;
+        const user = SS.currentUser();
+        let pinjamKode = null;   // barang yang sedang diajukan
+        let editId = null;       // pengajuan yang sedang dikoreksi
+
+        $('user-info').textContent = user.nama + ' (' + user.nim + ')';
+        $('user-avatar').textContent = (user.nama || '?').charAt(0).toUpperCase();
+
+        const emptyRow = (n, t) => `<tr><td colspan="${n}" class="p-6 text-center text-gray-400 text-sm">${t}</td></tr>`;
+        const btn = (cls, html, fn, id) => `<button type="button" data-id="${esc(id)}" onclick="${fn}(this.dataset.id)" class="${cls} text-white px-2.5 py-1 rounded text-xs font-medium">${html}</button>`;
+        const mine = () => SS.list('transaksi').filter(t => t.nim === user.nim);
+
+        function logout() { if (confirm('Apakah Anda ingin keluar dari sistem?')) SS.logout(); }
+
+        /* ================= NAVIGASI ================= */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+            $('tab-' + tabId).classList.remove('hidden');
+            document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === tabId));
+            renderAll();
+        }
+        function bukaModal(id) { const m = $(id); m.classList.remove('hidden'); m.classList.add('flex'); }
+        function tutupModal(id) { const m = $(id); m.classList.add('hidden'); m.classList.remove('flex'); }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') { tutupModal('modal-pinjam'); tutupModal('modal-edit'); } });
+
+        /* ================= RENDER ================= */
+        function renderAll() {
+            fillKategoriFilter();
+            renderKatalog();
+            renderPinjaman();
+            renderRiwayat();
+        }
+
+        function fillKategoriFilter() {
+            const f = $('kat-filter'), v = f.value, kat = SS.list('kategori');
+            f.innerHTML = '<option value="">Semua Kategori</option>' + kat.map(k => `<option value="${esc(k.nama)}">${esc(k.nama)}</option>`).join('');
+            f.value = kat.some(k => k.nama === v) ? v : '';
+        }
+
+        // FR-05: pencarian kode/nama/kategori/kondisi
+        function renderKatalog() {
+            const q = $('keyword').value.trim().toLowerCase();
+            const fk = $('kat-filter').value, fo = $('kondisi-filter').value;
+            const rows = SS.list('barang').filter(b =>
+                (!fk || b.kategori === fk) && (!fo || b.kondisi === fo) &&
+                (!q || [b.kode, b.nama, b.kategori, b.kondisi, b.lokasi].join(' ').toLowerCase().includes(q)));
+            $('table-katalog').innerHTML = rows.length ? rows.map(b => {
+                const sedia = SS.tersedia(b.kode);
+                let aksi;
+                if (b.kondisi === 'Perlu Perhatian') aksi = '<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded text-xs cursor-not-allowed">Tidak Tersedia</button>';
+                else if (sedia <= 0) aksi = '<button disabled class="bg-gray-300 text-gray-500 px-3 py-1 rounded text-xs cursor-not-allowed">Stok Habis</button>';
+                else aksi = `<button type="button" data-id="${esc(b.kode)}" onclick="bukaModalPinjam(this.dataset.id)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium">Pinjam</button>`;
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-semibold">${esc(b.kode)}</td>
+                    <td class="p-3">${esc(b.nama)}</td>
+                    <td class="p-3">${esc(b.kategori)}</td>
+                    <td class="p-3 font-medium ${SS.kondisiText(b.kondisi)}">${esc(b.kondisi)}</td>
+                    <td class="p-3">${esc(b.lokasi) || '-'}</td>
+                    <td class="p-3 font-bold ${sedia > 0 ? 'text-blue-600' : 'text-red-500'}">${sedia} Unit</td>
+                    <td class="p-3 text-center">${aksi}</td></tr>`;
+            }).join('') : emptyRow(7, 'Tidak ada barang yang cocok dengan pencarian.');
+        }
+
+        function renderPinjaman() {
+            const rows = mine().filter(t => SS.AKTIF.includes(t.status)).sort((a, b) => a.batasKembali.localeCompare(b.batasKembali));
+            const perluTindakan = rows.filter(t => SS.isLate(t)).length;
+            $('badge-pinjaman').textContent = perluTindakan;
+            $('badge-pinjaman').classList.toggle('hidden', perluTindakan === 0);
+            $('table-pinjaman').innerHTML = rows.length ? rows.map(t => {
+                let aksi;
+                if (t.status === 'Diajukan') {
+                    aksi = btn('bg-amber-500 hover:bg-amber-600', '<i class="fa-solid fa-pen-to-square"></i> Edit', 'editPengajuan', t.id) + ' ' +
+                           btn('bg-red-500 hover:bg-red-600', '<i class="fa-solid fa-trash"></i> Batalkan', 'hapusPengajuan', t.id);
+                } else if (t.status === 'Dipinjam') {
+                    aksi = btn('bg-emerald-600 hover:bg-emerald-700', 'Ajukan Pengembalian', 'prosesKembalikan', t.id);
+                } else {
+                    aksi = '<span class="text-xs text-gray-400 italic">Menunggu verifikasi petugas</span>';
+                }
+                return `<tr class="border-b">
+                    <td class="p-3 font-semibold">${esc(t.id)}</td>
+                    <td class="p-3">${esc(t.namaBarang)}</td>
+                    <td class="p-3">${t.jumlah} Unit</td>
+                    <td class="p-3">${SS.fmtDate(t.tglPinjam)}</td>
+                    <td class="p-3">${SS.fmtDate(t.batasKembali)}</td>
+                    <td class="p-3">${SS.badgeStatus(t.status)}${SS.isLate(t) ? '<span class="block text-[11px] font-semibold text-red-600">Terlambat ' + SS.daysLate(t) + ' hari</span>' : ''}</td>
+                    <td class="p-3 text-center space-x-1 whitespace-nowrap">${aksi}</td></tr>`;
+            }).join('') : emptyRow(7, 'Belum ada pinjaman aktif. Cari barang di menu "Cari &amp; Pinjam Barang".');
+        }
+
+        // FR-07: rekap & riwayat milik peminjam
+        function pelanggaran(t) {
+            if (SS.isLate(t)) return true;
+            if (t.status !== 'Dikembalikan') return false;
+            if (t.tglKembali && t.tglKembali > t.batasKembali) return true;
+            return SS.KONDISI.indexOf(t.kondisiAkhir) > SS.KONDISI.indexOf(t.kondisiAwal);
+        }
+        function renderRiwayat() {
+            const all = mine().sort((a, b) => b.tglPinjam.localeCompare(a.tglPinjam) || b.id.localeCompare(a.id));
+            const pernah = all.filter(t => ['Dipinjam', 'Menunggu Verifikasi', 'Dikembalikan'].includes(t.status));
+            const aktif = all.filter(t => t.status === 'Dipinjam' || t.status === 'Menunggu Verifikasi');
+            const langgar = all.filter(pelanggaran).length;
+            $('rk-total').textContent = pernah.length + ' Kali';
+            $('rk-aktif').textContent = aktif.length;
+            const el = $('rk-pelanggaran');
+            el.textContent = langgar ? langgar + ' pelanggaran' : 'Bersih';
+            el.className = 'text-2xl font-bold ' + (langgar ? 'text-red-600' : 'text-green-600');
+            $('table-riwayat').innerHTML = all.length ? all.map(t => `<tr>
+                <td class="p-2.5">${esc(t.id)}</td>
+                <td class="p-2.5">${SS.fmtDate(t.tglPinjam)}</td>
+                <td class="p-2.5">${SS.fmtDate(t.tglKembali)}</td>
+                <td class="p-2.5 font-semibold">${esc(t.namaBarang)}</td>
+                <td class="p-2.5">${t.jumlah}</td>
+                <td class="p-2.5">${(t.status === 'Diajukan' || t.status === 'Ditolak') ? '-' : SS.badgeKondisi(t.kondisiAwal)}</td>
+                <td class="p-2.5">${SS.badgeKondisi(t.kondisiAkhir)}</td>
+                <td class="p-2.5">${SS.badgeStatus(t.status)}</td>
+                <td class="p-2.5 text-gray-500">${esc(t.catatan) || '-'}</td></tr>`).join('') : emptyRow(9, 'Belum ada riwayat peminjaman.');
+        }
+
+        /* ================= PINJAM (FR-04, FR-06) ================= */
+        function bukaModalPinjam(kode) {
+            const b = SS.findBarang(kode); if (!b) return;
+            pinjamKode = kode;
+            $('modal-nama-barang').value = b.kode + ' - ' + b.nama;
+            $('modal-jumlah').value = 1;
+            $('modal-tgl-pinjam').value = SS.today();
+            $('modal-tgl-pinjam').min = SS.today();
+            $('modal-batas').value = SS.addDays(2);
+            validasiPinjam();
+            bukaModal('modal-pinjam');
+        }
+
+        // FR-06: jumlah dipinjam <= stok tersedia (dibaca langsung dari data, bukan angka tetap)
+        function validasiPinjam() {
+            const tgl = $('modal-tgl-pinjam').value;
+            $('modal-batas').min = tgl || SS.today();
+            const err = SS.cekPinjam({
+                kode: pinjamKode, jumlah: $('modal-jumlah').value,
+                tglPinjam: tgl, batasKembali: $('modal-batas').value, tglMin: SS.today()
+            });
+            $('hint-stok').textContent = 'Stok tersedia: ' + SS.tersedia(pinjamKode) + ' unit';
+            $('err-stok').textContent = err ? '⚠️ ' + err : '';
+            $('err-stok').classList.toggle('hidden', !err);
+            $('btn-submit').disabled = !!err;
+        }
+
+        function simpanPinjam() {
+            const r = SS.buatTransaksi({
+                nim: user.nim, nama: user.nama, kode: pinjamKode, jumlah: $('modal-jumlah').value,
+                tglPinjam: $('modal-tgl-pinjam').value, batasKembali: $('modal-batas').value, tglMin: SS.today()
+            });
+            if (!r.ok) { validasiPinjam(); return SS.toast(r.msg, 'error'); }
+            tutupModal('modal-pinjam');
+            SS.toast('Pengajuan ' + r.trx.id + ' dikirim. Menunggu persetujuan petugas.');
+            switchTab('pinjaman');
+        }
+
+        /* ================= EDIT / BATAL PENGAJUAN ================= */
+        function editPengajuan(id) {
+            const t = mine().find(x => x.id === id);
+            if (!t || t.status !== 'Diajukan') return SS.toast('Pengajuan ini sudah diproses petugas dan tidak bisa diedit.', 'error');
+            editId = id;
+            $('edit-barang').value = t.kode + ' - ' + t.namaBarang;
+            $('edit-jumlah').value = t.jumlah;
+            $('edit-batas').value = t.batasKembali;
+            $('edit-batas').min = t.tglPinjam;
+            validasiEdit();
+            bukaModal('modal-edit');
+        }
+        function validasiEdit() {
+            const t = mine().find(x => x.id === editId); if (!t) return;
+            const err = SS.cekPinjam({ kode: t.kode, jumlah: $('edit-jumlah').value, tglPinjam: t.tglPinjam, batasKembali: $('edit-batas').value, exceptId: t.id });
+            $('edit-hint').textContent = 'Maksimal ' + SS.tersedia(t.kode, t.id) + ' unit';
+            $('edit-err').textContent = err ? '⚠️ ' + err : '';
+            $('edit-err').classList.toggle('hidden', !err);
+            $('edit-submit').disabled = !!err;
+        }
+        function simpanKoreksi() {
+            const t = mine().find(x => x.id === editId);
+            if (!t || t.status !== 'Diajukan') { tutupModal('modal-edit'); renderAll(); return SS.toast('Pengajuan ini sudah diproses petugas.', 'error'); }
+            const r = SS.editTransaksi(editId, { jumlah: $('edit-jumlah').value, batasKembali: $('edit-batas').value });
+            if (!r.ok) return SS.toast(r.msg, 'error');
+            tutupModal('modal-edit');
+            renderAll();
+            SS.toast('Pengajuan berhasil dikoreksi.');
+        }
+        function hapusPengajuan(id) {
+            if (!confirm('Apakah Anda yakin ingin membatalkan & menghapus pengajuan ini?')) return;
+            const r = SS.hapusPengajuan(id, user.nim);
+            if (!r.ok) { renderAll(); return SS.toast(r.msg, 'error'); }
+            renderAll();
+            SS.toast('Pengajuan dibatalkan.');
+        }
+
+        /* ================= KEMBALIKAN ================= */
+        function prosesKembalikan(id) {
+            if (!confirm('Tandai bahwa Anda sudah mengembalikan barang ini ke petugas? Petugas akan memeriksa kondisinya.')) return;
+            const r = SS.mintaKembali(id, user.nim);
+            if (!r.ok) return SS.toast(r.msg, 'error');
+            renderAll();
+            SS.toast('Pengembalian diajukan. Menunggu verifikasi petugas.');
+        }
+
+        /* ================= INIT ================= */
+        SS.onChange = renderAll;   // otomatis ikut berubah kalau petugas mengubah data di tab lain
+        switchTab('katalog');
+    </script>
+</body>
+</html>

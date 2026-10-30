@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masuk - SaranaShare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .tab-btn { flex: 1; padding: .6rem 0; font-weight: 600; font-size: .875rem; color: #4b5563; border-bottom: 3px solid transparent; transition: all .15s; }
+        .tab-btn:hover { color: #1d5c8a; }
+        .tab-btn.active { color: #1d5c8a; border-bottom-color: #1d5c8a; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-[#1d5c8a] to-[#0f3a57] font-sans text-gray-800 flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md">
+        <!-- Brand -->
+        <div class="flex flex-col items-center text-white mb-6">
+            <img src="logo_pbl-removebg-preview.png" alt="Logo SaranaShare" onerror="this.style.display='none'" class="w-16 h-16 object-contain rounded-lg bg-white p-2 shadow-lg">
+            <h1 class="text-2xl font-bold tracking-wide mt-3">SaranaShare</h1>
+            <p class="text-sm text-blue-100">Sistem Peminjaman Sarana &amp; Prasarana</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+            <!-- Tab peran -->
+            <div id="role-tabs" class="flex border-b border-gray-200">
+                <button type="button" id="tab-petugas" onclick="setMode('petugas')" class="tab-btn active"><i class="fa-solid fa-user-shield mr-1"></i> Petugas Barang</button>
+                <button type="button" id="tab-peminjam" onclick="setMode('peminjam')" class="tab-btn"><i class="fa-solid fa-user mr-1"></i> Peminjam</button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <!-- Pesan -->
+                <div id="msg" class="hidden text-sm rounded px-3 py-2" role="alert"></div>
+
+                <!-- Sudah login -->
+                <div id="already" class="hidden text-sm bg-blue-50 border border-blue-200 text-blue-900 rounded px-3 py-2 space-y-2">
+                    <p>Anda sudah masuk sebagai <b id="already-nama"></b>.</p>
+                    <div class="flex gap-2">
+                        <a id="already-go" href="#" class="bg-[#1d5c8a] text-white px-3 py-1 rounded text-xs font-medium">Lanjutkan</a>
+                        <button type="button" onclick="gantiAkun()" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-medium">Ganti akun</button>
+                    </div>
+                </div>
+
+                <!-- FORM LOGIN PETUGAS -->
+                <form id="form-petugas" onsubmit="submitPetugas(event)" class="space-y-4" autocomplete="on">
+                    <div>
+                        <label for="p-user" class="text-xs font-semibold text-gray-600">Username</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user absolute left-3 top-3 text-gray-400 text-sm"></i>
+                            <input type="text" id="p-user" autocomplete="username" placeholder="Username petugas" class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="p-pass" class="text-xs font-semibold text-gray-600">Password</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute left-3 top-3 text-gray-400 text-sm"></i>
+                            <input type="password" id="p-pass" autocomplete="current-password" placeholder="Password" class="w-full pl-9 pr-10 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                            <button type="button" onclick="togglePw('p-pass', this)" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600" title="Tampilkan/sembunyikan"><i class="fa-regular fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-[#1d5c8a] hover:bg-[#164a70] text-white font-semibold py-2 rounded transition">Masuk sebagai Petugas</button>
+                </form>
+
+                <!-- FORM LOGIN PEMINJAM -->
+                <form id="form-peminjam" onsubmit="submitPeminjam(event)" class="hidden space-y-4" autocomplete="on">
+                    <div>
+                        <label for="m-nim" class="text-xs font-semibold text-gray-600">NIM / NIP</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-id-card absolute left-3 top-3 text-gray-400 text-sm"></i>
+                            <input type="text" id="m-nim" autocomplete="username" placeholder="Contoh: 3312401001" class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="m-pass" class="text-xs font-semibold text-gray-600">Password</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute left-3 top-3 text-gray-400 text-sm"></i>
+                            <input type="password" id="m-pass" autocomplete="current-password" placeholder="Password" class="w-full pl-9 pr-10 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                            <button type="button" onclick="togglePw('m-pass', this)" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600" title="Tampilkan/sembunyikan"><i class="fa-regular fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-[#1d5c8a] hover:bg-[#164a70] text-white font-semibold py-2 rounded transition">Masuk sebagai Peminjam</button>
+                    <p class="text-center text-sm text-gray-600">Belum punya akun? <button type="button" onclick="setMode('daftar')" class="text-[#1d5c8a] font-semibold hover:underline">Daftar</button></p>
+                </form>
+
+                <!-- FORM DAFTAR PEMINJAM -->
+                <form id="form-daftar" onsubmit="submitDaftar(event)" class="hidden space-y-3" autocomplete="off">
+                    <h2 class="font-bold text-gray-800">Daftar Akun Peminjam</h2>
+                    <div>
+                        <label for="d-nim" class="text-xs font-semibold text-gray-600">NIM / NIP</label>
+                        <input type="text" id="d-nim" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="d-nama" class="text-xs font-semibold text-gray-600">Nama Lengkap</label>
+                        <input type="text" id="d-nama" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label for="d-kelas" class="text-xs font-semibold text-gray-600">Kelas / Jabatan</label>
+                            <input type="text" id="d-kelas" placeholder="IF Pagi A" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="d-hp" class="text-xs font-semibold text-gray-600">No. HP</label>
+                            <input type="text" id="d-hp" placeholder="08xxxxxxxxxx" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="d-pass" class="text-xs font-semibold text-gray-600">Password (min. 6 karakter)</label>
+                        <input type="password" id="d-pass" autocomplete="new-password" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="d-pass2" class="text-xs font-semibold text-gray-600">Ulangi Password</label>
+                        <input type="password" id="d-pass2" autocomplete="new-password" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded transition">Daftar</button>
+                    <p class="text-center text-sm text-gray-600">Sudah punya akun? <button type="button" onclick="setMode('peminjam')" class="text-[#1d5c8a] font-semibold hover:underline">Masuk</button></p>
+                </form>
+
+                <!-- Info akun demo (hapus blok ini saat sudah dipakai sungguhan) -->
+                <div class="text-[11px] text-gray-500 bg-gray-50 border border-dashed border-gray-300 rounded p-2 leading-relaxed">
+                    <b>Akun demo</b><br>
+                    Petugas: <code>petugas</code> / <code>petugas123</code><br>
+                    Peminjam: NIM <code>3312401001</code>, password awal sama dengan NIM-nya.
+                </div>
+            </div>
+        </div>
+        <p class="text-center text-xs text-blue-100 mt-4">&copy; SaranaShare</p>
+    </div>
+
+    <script>
+/* ============================================================
+   SaranaShare - Data Store Bersama (frontend, localStorage)
+   ------------------------------------------------------------
+   Dipakai oleh petugas.html DAN peminjam.html supaya keduanya
+   membaca/menulis data yang sama.
+
+   Nanti saat backend sudah ada, cukup ganti isi fungsi
+   SS.list() dan SS.save() (dan fungsi aturan bisnis di bawah)
+   dengan pemanggilan API. Halaman HTML tidak perlu banyak diubah.
+
+   LOGIN: login.html menyimpan sesi lewat SS.setSession(...).
+   petugas.html / peminjam.html menjaga halamannya dengan
+   SS.requireRole('petugas' | 'peminjam').
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const SS = {};
+  window.SS = SS;
+
+  SS.LOGIN_URL = 'login.html';          // <- ganti sesuai nama file login kamu
+  const KEYS = {
+    kategori: 'ss_kategori',
+    barang: 'ss_barang',
+    anggota: 'ss_anggota',
+    transaksi: 'ss_transaksi',
+    session: 'ss_session'
+  };
+  SS.AKTIF = ['Diajukan', 'Dipinjam', 'Menunggu Verifikasi']; // status yang "menahan" stok
+  SS.KONDISI = ['Baik', 'Rusak Ringan', 'Perlu Perhatian'];   // urut dari terbaik ke terburuk
+  const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+  /* ---------- penyimpanan dasar ---------- */
+  const mem = {}; // cadangan kalau localStorage diblokir browser
+  function rawGet(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] === undefined ? null : mem[k]; } }
+  function rawSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
+  function rawDel(k) { try { localStorage.removeItem(k); } catch (e) { delete mem[k]; } }
+
+  function load(name) {
+    const raw = rawGet(KEYS[name]);
+    if (raw === null) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+  SS.list = name => load(name) || [];
+  SS.save = (name, arr) => rawSet(KEYS[name], JSON.stringify(arr));
+
+  /* ---------- tanggal & util ---------- */
+  const z = n => String(n).padStart(2, '0');
+  const iso = d => d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+  SS.today = () => iso(new Date());
+  SS.addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+  SS.fmtDate = s => {
+    if (!s) return '-';
+    const p = s.split('-');
+    return (+p[2]) + ' ' + BULAN[+p[1] - 1] + ' ' + p[0];
+  };
+  SS.daysLate = t => Math.max(0, Math.round((new Date(SS.today()) - new Date(t.batasKembali)) / 86400000));
+  SS.esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  /* ---------- data awal (demo) ---------- */
+  function defaults() {
+    const y = new Date().getFullYear();
+    const id = n => 'TRX-' + y + '-' + z(n).padStart(3, '0');
+    const A = { nim: '3312401001', nama: 'Ahmad Dahlan' };
+    const S = { nim: '3312401002', nama: 'Siti Aminah' };
+    const B = { nim: '3312401003', nama: 'Budi Santoso' };
+    const mk = (n, p, kode, namaBarang, jumlah, pj, bk, kembali, awal, akhir, status, catatan) => ({
+      id: id(n), nim: p.nim, nama: p.nama, kode, namaBarang, jumlah,
+      tglPinjam: SS.addDays(pj), batasKembali: SS.addDays(bk),
+      tglKembali: kembali === null ? null : SS.addDays(kembali),
+      kondisiAwal: awal, kondisiAkhir: akhir, catatan: catatan || '', status
+    });
+    return {
+      kategori: [
+        { id: 'KAT-01', nama: 'Elektronik', ket: 'Perangkat elektronik & komputer' },
+        { id: 'KAT-02', nama: 'Alat Tulis', ket: 'Perlengkapan tulis & presentasi' },
+        { id: 'KAT-03', nama: 'Perabotan', ket: 'Meja, kursi, dan perabot lain' }
+      ],
+      barang: [
+        { kode: 'A001', nama: 'Laptop Dell XPS 13', kategori: 'Elektronik', kondisi: 'Baik', stok: 15, lokasi: 'Gudang A' },
+        { kode: 'A002', nama: 'Proyektor Epson EB-X400', kategori: 'Elektronik', kondisi: 'Baik', stok: 5, lokasi: 'Lab Multimedia' },
+        { kode: 'A003', nama: 'Spidol Whiteboard (Box)', kategori: 'Alat Tulis', kondisi: 'Baik', stok: 30, lokasi: 'Gudang B' },
+        { kode: 'A004', nama: 'Kursi Lipat', kategori: 'Perabotan', kondisi: 'Baik', stok: 20, lokasi: 'Gudang B' },
+        { kode: 'A005', nama: 'Kamera DSLR Canon 200D', kategori: 'Elektronik', kondisi: 'Rusak Ringan', stok: 3, lokasi: 'Lab Multimedia' }
+      ],
+      anggota: [
+        { nim: A.nim, nama: A.nama, kelas: 'IF Pagi A', hp: '081234567890' },
+        { nim: S.nim, nama: S.nama, kelas: 'IF Pagi A', hp: '081234567891' },
+        { nim: B.nim, nama: B.nama, kelas: 'IF Pagi B', hp: '081234567892' }
+      ],
+      transaksi: [
+        mk(1, A, 'A001', 'Laptop Dell XPS 13', 1, -15, -13, null, 'Baik', null, 'Dipinjam'),            // terlambat
+        mk(2, A, 'A002', 'Proyektor Epson EB-X400', 2, -2, 0, null, 'Baik', null, 'Dipinjam'),
+        mk(3, S, 'A005', 'Kamera DSLR Canon 200D', 3, -1, 2, null, 'Rusak Ringan', null, 'Dipinjam'),     // stok habis
+        mk(4, A, 'A002', 'Proyektor Epson EB-X400', 1, -6, -4, -4, 'Baik', 'Baik', 'Dikembalikan'),
+        mk(5, B, 'A004', 'Kursi Lipat', 5, 0, 2, null, 'Baik', null, 'Diajukan'),
+        mk(6, S, 'A005', 'Kamera DSLR Canon 200D', 1, -20, -18, -18, 'Baik', 'Rusak Ringan', 'Dikembalikan', 'Lensa ada goresan halus')
+      ]
+    };
+  }
+  SS.init = () => {
+    const d = defaults();
+    Object.keys(d).forEach(name => { if (load(name) === null) SS.save(name, d[name]); });
+  };
+  SS.reset = () => {
+    ['kategori', 'barang', 'anggota', 'transaksi'].forEach(n => rawDel(KEYS[n]));
+    SS.init();
+  };
+
+  /* ---------- sesi login ---------- */
+  SS.session = () => {
+    try { const s = JSON.parse(rawGet(KEYS.session)); return s && s.role ? s : null; } catch (e) { return null; }
+  };
+  SS.setSession = s => rawSet(KEYS.session, JSON.stringify(s));
+  SS.clearSession = () => rawDel(KEYS.session);
+  // dipanggil di awal halaman: kalau belum login sebagai role tsb -> kembali ke halaman login
+  SS.requireRole = role => {
+    const s = SS.session();
+    if (s && s.role === role) return true;
+    location.replace(SS.LOGIN_URL + '?need=' + role);
+    return false;
+  };
+  SS.currentUser = () => {
+    const s = SS.session();
+    return s && s.role === 'peminjam' ? { nim: s.nim, nama: s.nama } : { nim: '', nama: '' };
+  };
+  SS.logout = () => { SS.clearSession(); location.href = SS.LOGIN_URL; };
+
+  /* ---------- stok ---------- */
+  SS.findBarang = kode => SS.list('barang').find(b => b.kode === kode);
+  // jumlah unit yang sedang diajukan/dipinjam (menahan stok)
+  SS.held = (kode, exceptId) => SS.list('transaksi')
+    .filter(t => t.kode === kode && SS.AKTIF.includes(t.status) && t.id !== exceptId)
+    .reduce((a, t) => a + t.jumlah, 0);
+  SS.tersedia = (kode, exceptId) => {
+    const b = SS.findBarang(kode);
+    return b ? Math.max(0, b.stok - SS.held(kode, exceptId)) : 0;
+  };
+  SS.bisaDipinjam = b => b.kondisi !== 'Perlu Perhatian' && SS.tersedia(b.kode) > 0;
+  SS.isLate = t => (t.status === 'Dipinjam' || t.status === 'Menunggu Verifikasi') && t.batasKembali < SS.today();
+
+  /* ---------- FR-06: validasi peminjaman ---------- */
+  SS.cekPinjam = o => {
+    const b = SS.findBarang(o.kode);
+    if (!b) return 'Barang tidak ditemukan.';
+    if (!o.exceptId && b.kondisi === 'Perlu Perhatian') return 'Barang berstatus "Perlu Perhatian" dan belum bisa dipinjam.';
+    const j = Number(o.jumlah);
+    if (o.jumlah === '' || !Number.isInteger(j) || j <= 0) return 'Jumlah harus bilangan bulat lebih dari 0.';
+    const sedia = SS.tersedia(o.kode, o.exceptId);
+    if (j > sedia) return 'Jumlah melebihi stok tersedia (' + sedia + ' unit).';
+    if (!o.tglPinjam || !o.batasKembali) return 'Tanggal pinjam dan batas kembali harus diisi.';
+    if (o.tglMin && o.tglPinjam < o.tglMin) return 'Tanggal pinjam tidak boleh sebelum hari ini.';
+    if (o.batasKembali < o.tglPinjam) return 'Batas kembali tidak boleh sebelum tanggal pinjam.';
+    return null;
+  };
+
+  /* ---------- transaksi ---------- */
+  function nextId() {
+    const pre = 'TRX-' + new Date().getFullYear() + '-';
+    const max = SS.list('transaksi').filter(t => t.id.startsWith(pre))
+      .reduce((m, t) => Math.max(m, parseInt(t.id.slice(pre.length), 10) || 0), 0);
+    return pre + String(max + 1).padStart(3, '0');
+  }
+  function ubah(id, fn) {
+    const arr = SS.list('transaksi');
+    const t = arr.find(x => x.id === id);
+    if (!t) return { ok: false, msg: 'Transaksi tidak ditemukan.' };
+    const r = fn(t) || {};
+    if (r.ok === false) return r;
+    SS.save('transaksi', arr);
+    return { ok: true, trx: t, msg: r.msg };
+  }
+
+  // langsung=true -> dibuat petugas, langsung berstatus Dipinjam. Selain itu: Diajukan oleh peminjam.
+  SS.buatTransaksi = o => {
+    const err = SS.cekPinjam(o);
+    if (err) return { ok: false, msg: err };
+    const b = SS.findBarang(o.kode);
+    const arr = SS.list('transaksi');
+    const t = {
+      id: nextId(), nim: o.nim, nama: o.nama, kode: o.kode, namaBarang: b.nama,
+      jumlah: Number(o.jumlah), tglPinjam: o.tglPinjam, batasKembali: o.batasKembali,
+      tglKembali: null, kondisiAwal: b.kondisi, kondisiAkhir: null, catatan: '',
+      status: o.langsung ? 'Dipinjam' : 'Diajukan'
+    };
+    arr.push(t);
+    SS.save('transaksi', arr);
+    return { ok: true, trx: t };
+  };
+
+  SS.editTransaksi = (id, o) => ubah(id, t => {
+    if (!['Diajukan', 'Dipinjam'].includes(t.status)) return { ok: false, msg: 'Transaksi ini sudah tidak bisa diedit.' };
+    const err = SS.cekPinjam({ kode: t.kode, jumlah: o.jumlah, tglPinjam: t.tglPinjam, batasKembali: o.batasKembali, exceptId: t.id });
+    if (err) return { ok: false, msg: err };
+    t.jumlah = Number(o.jumlah);
+    t.batasKembali = o.batasKembali;
+  });
+
+  SS.setujui = id => ubah(id, t => {
+    if (t.status !== 'Diajukan') return { ok: false, msg: 'Hanya pengajuan yang bisa disetujui.' };
+    const b = SS.findBarang(t.kode);
+    if (!b) return { ok: false, msg: 'Barang sudah tidak ada di data master.' };
+    if (b.kondisi === 'Perlu Perhatian') return { ok: false, msg: 'Barang berstatus "Perlu Perhatian", tidak bisa dipinjamkan.' };
+    t.status = 'Dipinjam';
+    t.kondisiAwal = b.kondisi;
+  });
+
+  SS.tolak = (id, alasan) => ubah(id, t => {
+    if (t.status !== 'Diajukan') return { ok: false, msg: 'Hanya pengajuan yang bisa ditolak.' };
+    t.status = 'Ditolak';
+    t.catatan = alasan || '';
+  });
+
+  SS.batalkan = id => ubah(id, t => {
+    if (!SS.AKTIF.includes(t.status)) return { ok: false, msg: 'Transaksi ini tidak bisa dibatalkan.' };
+    t.status = 'Dibatalkan';
+  });
+
+  // peminjam membatalkan pengajuannya sendiri (belum disetujui) -> dihapus
+  SS.hapusPengajuan = (id, nim) => {
+    const arr = SS.list('transaksi');
+    const i = arr.findIndex(t => t.id === id && t.nim === nim && t.status === 'Diajukan');
+    if (i < 0) return { ok: false, msg: 'Pengajuan tidak bisa dibatalkan (mungkin sudah diproses petugas).' };
+    arr.splice(i, 1);
+    SS.save('transaksi', arr);
+    return { ok: true };
+  };
+
+  // peminjam menyatakan sudah mengembalikan -> menunggu verifikasi petugas
+  SS.mintaKembali = (id, nim) => ubah(id, t => {
+    if (t.nim !== nim) return { ok: false, msg: 'Ini bukan pinjaman Anda.' };
+    if (t.status !== 'Dipinjam') return { ok: false, msg: 'Pinjaman ini tidak bisa diajukan pengembalian.' };
+    t.status = 'Menunggu Verifikasi';
+  });
+
+  // petugas memproses pengembalian + mencatat kondisi akhir
+  SS.kembalikan = (id, kondisiAkhir, catatan) => ubah(id, t => {
+    if (!['Dipinjam', 'Menunggu Verifikasi'].includes(t.status)) return { ok: false, msg: 'Transaksi ini tidak sedang dipinjam.' };
+    if (!SS.KONDISI.includes(kondisiAkhir)) return { ok: false, msg: 'Pilih kondisi barang saat dikembalikan.' };
+    t.status = 'Dikembalikan';
+    t.tglKembali = SS.today();
+    t.kondisiAkhir = kondisiAkhir;
+    t.catatan = catatan || t.catatan || '';
+    let msg = 'Barang dikembalikan, stok bertambah.';
+    const bs = SS.list('barang');
+    const b = bs.find(x => x.kode === t.kode);
+    if (b && SS.KONDISI.indexOf(kondisiAkhir) > SS.KONDISI.indexOf(b.kondisi)) {
+      b.kondisi = kondisiAkhir;
+      SS.save('barang', bs);
+      msg += ' Kondisi barang di Data Barang diperbarui menjadi "' + kondisiAkhir + '".';
+    }
+    return { msg };
+  });
+
+  /* ---------- tampilan: badge ---------- */
+  const BADGE = {
+    'Diajukan': 'bg-amber-100 text-amber-800',
+    'Dipinjam': 'bg-blue-100 text-blue-800',
+    'Menunggu Verifikasi': 'bg-purple-100 text-purple-800',
+    'Dikembalikan': 'bg-emerald-100 text-emerald-800',
+    'Ditolak': 'bg-rose-100 text-rose-800',
+    'Dibatalkan': 'bg-gray-200 text-gray-700'
+  };
+  SS.badgeStatus = s => '<span class="' + (BADGE[s] || 'bg-gray-100 text-gray-700') + ' px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap">' + SS.esc(s) + '</span>';
+  const KB = { 'Baik': 'bg-emerald-100 text-emerald-800', 'Rusak Ringan': 'bg-orange-100 text-orange-800', 'Perlu Perhatian': 'bg-red-100 text-red-800' };
+  SS.badgeKondisi = k => k ? '<span class="' + (KB[k] || 'bg-gray-100 text-gray-700') + ' px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap">' + SS.esc(k) + '</span>' : '<span class="text-gray-400">-</span>';
+  SS.kondisiText = k => k === 'Baik' ? 'text-green-600' : (k === 'Rusak Ringan' ? 'text-orange-500' : 'text-red-500');
+
+  /* ---------- toast & CSV ---------- */
+  SS.toast = (msg, type) => {
+    let box = document.getElementById('ss-toast');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'ss-toast';
+      box.className = 'fixed bottom-5 right-5 z-[100] space-y-2';
+      document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    el.className = 'px-4 py-2.5 rounded shadow-lg text-sm text-white max-w-sm ' + (type === 'error' ? 'bg-red-600' : 'bg-emerald-600');
+    el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), type === 'error' ? 5000 : 3500);
+  };
+  SS.csv = (rows, filename) => {
+    const cell = v => {
+      let s = String(v == null ? '' : v);
+      if (s.length > 1 && /^[=+\-@]/.test(s)) s = "'" + s; // cegah formula injection di Excel
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+    const text = '\ufeff' + rows.map(r => r.map(cell).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  /* ---------- sinkron antar tab (petugas <-> peminjam) ---------- */
+  SS.onChange = null;
+  window.addEventListener('storage', e => {
+    if (e.key && e.key.indexOf('ss_') === 0 && typeof SS.onChange === 'function') SS.onChange();
+  });
+
+  SS.init();
+})();
+
+    </script>
+    <script>
+        const $ = id => document.getElementById(id);
+
+        /* Akun petugas (demo, sisi frontend saja).
+           Saat backend sudah ada, ganti dengan pengecekan ke server. */
+        const PETUGAS = [
+            { username: 'petugas', password: 'petugas123', nama: 'Petugas Barang' }
+        ];
+
+        const DASHBOARD = { petugas: 'FE.html', peminjam: 'peminjam.html' };
+        let mode = 'petugas';
+
+        /* ---------- util ---------- */
+        async function hashPw(p) {
+            try {
+                if (window.crypto && crypto.subtle) {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('saranashare:' + p));
+                    return 'sha256:' + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch (e) { /* jatuh ke plain */ }
+            return 'plain:' + p;
+        }
+        async function passCocok(tersimpan, input) {
+            if (tersimpan.indexOf('plain:') === 0) return tersimpan === 'plain:' + input;
+            return tersimpan === await hashPw(input);
+        }
+        function showMsg(text, type) {
+            const m = $('msg');
+            m.textContent = text;
+            m.className = 'text-sm rounded px-3 py-2 ' + (type === 'ok'
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                : (type === 'info' ? 'bg-blue-50 border border-blue-200 text-blue-800' : 'bg-red-50 border border-red-200 text-red-700'));
+        }
+        function hideMsg() { $('msg').className = 'hidden'; }
+        function togglePw(id, btn) {
+            const i = $(id), show = i.type === 'password';
+            i.type = show ? 'text' : 'password';
+            btn.innerHTML = show ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
+        }
+
+        /* ---------- tampilan ---------- */
+        function setMode(m) {
+            mode = m;
+            hideMsg();
+            $('form-petugas').classList.toggle('hidden', m !== 'petugas');
+            $('form-peminjam').classList.toggle('hidden', m !== 'peminjam');
+            $('form-daftar').classList.toggle('hidden', m !== 'daftar');
+            $('role-tabs').classList.toggle('hidden', m === 'daftar');
+            $('tab-petugas').classList.toggle('active', m === 'petugas');
+            $('tab-peminjam').classList.toggle('active', m === 'peminjam');
+            const first = { petugas: 'p-user', peminjam: 'm-nim', daftar: 'd-nim' }[m];
+            if ($(first) && $(first).focus) $(first).focus();
+        }
+
+        /* ---------- login petugas ---------- */
+        async function submitPetugas(e) {
+            e.preventDefault();
+            const user = $('p-user').value.trim();
+            const pass = $('p-pass').value;
+            if (!user || !pass) return showMsg('Username dan password harus diisi.');
+            const akun = PETUGAS.find(a => a.username.toLowerCase() === user.toLowerCase() && a.password === pass);
+            if (!akun) { $('p-pass').value = ''; return showMsg('Username atau password salah.'); }
+            SS.setSession({ role: 'petugas', username: akun.username, nama: akun.nama });
+            location.href = DASHBOARD.petugas;
+        }
+
+        /* ---------- login peminjam ---------- */
+        async function submitPeminjam(e) {
+            e.preventDefault();
+            const nim = $('m-nim').value.trim();
+            const pass = $('m-pass').value;
+            if (!nim || !pass) return showMsg('NIM/NIP dan password harus diisi.');
+            const a = SS.list('anggota').find(x => x.nim === nim);
+            // Akun yang dibuat petugas belum punya password: password awalnya = NIM/NIP.
+            const benar = !!a && (a.passHash ? await passCocok(a.passHash, pass) : pass === a.nim);
+            if (!benar) { $('m-pass').value = ''; return showMsg('NIM/NIP atau password salah.'); }
+            SS.setSession({ role: 'peminjam', nim: a.nim, nama: a.nama });
+            location.href = DASHBOARD.peminjam;
+        }
+
+        /* ---------- daftar peminjam ---------- */
+        async function submitDaftar(e) {
+            e.preventDefault();
+            const nim = $('d-nim').value.trim();
+            const nama = $('d-nama').value.trim();
+            const kelas = $('d-kelas').value.trim();
+            const hp = $('d-hp').value.trim();
+            const pass = $('d-pass').value;
+            const pass2 = $('d-pass2').value;
+            if (!nim || !nama || !pass) return showMsg('NIM/NIP, nama, dan password harus diisi.');
+            if (hp && !/^\+?[0-9]{8,15}$/.test(hp)) return showMsg('No. HP hanya angka (8-15 digit).');
+            if (pass.length < 6) return showMsg('Password minimal 6 karakter.');
+            if (pass !== pass2) return showMsg('Konfirmasi password tidak sama.');
+            const arr = SS.list('anggota');
+            if (arr.some(x => x.nim === nim)) return showMsg('NIM/NIP ini sudah terdaftar. Silakan masuk.');
+            arr.push({ nim, nama, kelas, hp, passHash: await hashPw(pass) });
+            SS.save('anggota', arr);
+            ['d-nim', 'd-nama', 'd-kelas', 'd-hp', 'd-pass', 'd-pass2'].forEach(id => { $(id).value = ''; });
+            setMode('peminjam');
+            $('m-nim').value = nim;
+            $('m-pass').focus();
+            showMsg('Pendaftaran berhasil. Silakan masuk dengan akun Anda.', 'ok');
+        }
+
+        /* ---------- sesi yang sudah ada ---------- */
+        function gantiAkun() {
+            SS.clearSession();
+            $('already').classList.add('hidden');
+            hideMsg();
+        }
+        function init() {
+            const params = new URLSearchParams(location.search);
+            const need = params.get('need');
+            if (need === 'petugas' || need === 'peminjam') {
+                setMode(need);
+                showMsg('Silakan masuk sebagai ' + (need === 'petugas' ? 'Petugas Barang' : 'Peminjam') + ' terlebih dahulu.', 'info');
+            }
+            const s = SS.session();
+            if (s && DASHBOARD[s.role]) {
+                $('already-nama').textContent = (s.nama || s.username || s.nim) + ' (' + (s.role === 'petugas' ? 'Petugas' : 'Peminjam') + ')';
+                $('already-go').href = DASHBOARD[s.role];
+                $('already').classList.remove('hidden');
+            }
+        }
+        init();
+    </script>
+</body>
+</html>
